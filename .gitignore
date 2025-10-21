@@ -1,3 +1,7 @@
 # Excluir la carpeta del entorno virtual
 venv/
 *.pyc
+
+# Excluir la base de datos y los archivos CSV grandes
+futbolmania.db
+data/
