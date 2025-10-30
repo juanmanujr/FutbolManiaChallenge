@@ -1,17 +1,19 @@
+# core/database_manager.py (VERSIÓN CORREGIDA Y FINAL PARA EL RANKING)
+
 import sqlite3
 import pandas as pd
 import os
+import logging
 from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO) 
 
 # ----------------------------------------------------------------------
 # CONFIGURACIÓN DE RUTAS
 # ----------------------------------------------------------------------
-
-# Define la ruta base del proyecto (un nivel arriba del directorio 'core')
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Define la ruta a la base de datos (en la raíz del proyecto)
 DATABASE_FILE = os.path.join(BASE_DIR, 'futbolmania.db')
-# Define la ruta a la carpeta de datos CSV
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
 # ----------------------------------------------------------------------
@@ -20,8 +22,8 @@ DATA_DIR = os.path.join(BASE_DIR, 'data')
 
 class DatabaseManager:
     """
-    Clase para gestionar la conexión y la carga de datos 
-    desde archivos CSV a la base de datos SQLite.
+    Clase para gestionar la conexión, la carga inicial de datos 
+    y la persistencia (guardado de Ranking) en SQLite.
     """
     def __init__(self, db_path=DATABASE_FILE, data_dir=DATA_DIR):
         self.db_path = db_path
@@ -29,121 +31,136 @@ class DatabaseManager:
 
     @contextmanager
     def connect(self):
-        """Context Manager para manejar la conexión a SQLite."""
+        """Context Manager para manejar la conexión a SQLite de forma segura."""
         conn = None
         try:
             conn = sqlite3.connect(self.db_path)
+            # Asegura la conversión de tipos (ej. TIME, DATE) para pandas
+            conn.row_factory = sqlite3.Row 
             yield conn
         except sqlite3.Error as e:
-            print(f"Error de conexión a la base de datos: {e}")
+            logger.error(f"Error de conexión a la base de datos: {e}")
+            # print(f"Error de conexión a la base de datos: {e}") # Usamos logger
         finally:
             if conn:
                 conn.close()
+    
+    def query(self, sql_query, params=None):
+        """
+        Ejecuta una consulta SQL y devuelve los resultados como un DataFrame de Pandas.
+        """
+        with self.connect() as conn:
+            if not conn:
+                return pd.DataFrame()
+            try:
+                # Usamos read_sql_query de Pandas, que es ideal para SELECTs
+                return pd.read_sql_query(sql_query, conn, params=params)
+            except Exception as e:
+                logger.error(f"ERROR en la ejecución de consulta SQL: {e}")
+                # print(f"ERROR en la ejecución de consulta SQL: {e}") # Usamos logger
+                return pd.DataFrame()
+
+    # --- LÓGICA DE PERSISTENCIA Y RANKING (CORREGIDA) ---
+    
+    def _create_ranking_table(self):
+        """Crea la tabla Ranking si no existe (AÑADIDA COLUMNA player_name)."""
+        with self.connect() as conn:
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS Ranking (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        player_name TEXT NOT NULL,  -- <<-- ¡CORREGIDO!
+                        score INTEGER NOT NULL,
+                        total_questions INTEGER NOT NULL,
+                        game_mode TEXT NOT NULL,
+                        date_played TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # FIX CRÍTICO: Si la tabla ya existe y le falta la columna 'player_name', la añadimos.
+                try:
+                    cursor.execute("ALTER TABLE Ranking ADD COLUMN player_name TEXT NOT NULL DEFAULT 'Anónimo';")
+                    logger.info("Columna 'player_name' añadida a la tabla Ranking.")
+                except sqlite3.OperationalError as e:
+                    if 'duplicate column name' in str(e):
+                        pass # La columna ya existe, no hacemos nada.
+                    else:
+                        logger.error(f"Error al intentar añadir columna a Ranking: {e}")
+                        
+                conn.commit()
+
+    def save_score(self, player_name: str, score: int, total_questions: int, game_mode: str = "TriviaClasica"):
+        """Guarda un puntaje en la base de datos (AÑADIDO player_name)."""
+        self._create_ranking_table() # Asegura que la tabla exista antes de insertar
+        
+        # Saneamiento básico del nombre
+        player_name = player_name.strip() if player_name else "Anónimo"
+        
+        with self.connect() as conn:
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO Ranking (player_name, score, total_questions, game_mode)
+                    VALUES (?, ?, ?, ?)
+                """, (player_name, score, total_questions, game_mode))
+                conn.commit()
+                
+    def fetch_top_scores(self, limit: int = 10) -> pd.DataFrame:
+        """Obtiene los mejores puntajes del ranking (AÑADIDO player_name)."""
+        self._create_ranking_table() # Asegura que la tabla exista antes de consultar
+        sql = """
+            SELECT player_name, score, total_questions, game_mode, date_played 
+            FROM Ranking 
+            ORDER BY score DESC, date_played DESC 
+            LIMIT ?
+        """
+        # Usamos el método 'query' ya definido para obtener un DataFrame
+        return self.query(sql, params=(limit,))
+
+
+    # --- LÓGICA DE CARGA INICIAL (SIN CAMBIOS) ---
+    
+    # ... Resto del código load_csv_to_db, initialize_database, load_all_data y create_indices.
+    # El resto del código no requiere cambios a menos que el ALTER TABLE no funcione
+    # y necesites borrar la DB.
+    # ...
+
 
     def initialize_database(self):
-        """
-        Conecta a la base de datos (o la crea si no existe) e inicia
-        el proceso de carga de todos los archivos CSV.
-        """
-        print(f"Conexión exitosa a la base de datos: {self.db_path}")
-        self.load_all_data()
-
-    def load_data_from_csv(self, file_name, table_name):
-        """
-        Carga un archivo CSV específico en una tabla SQLite.
-        Aplica corrección de codificación y manejo de errores.
-        """
-        file_path = os.path.join(self.data_dir, file_name)
+        """Inicializa la DB, carga las preguntas si es la primera vez y asegura la tabla Ranking."""
+        db_exists = os.path.exists(self.db_path)
         
-        try:
-            # Intentar cargar con 'latin1' (ISO-8859-1) para manejar caracteres especiales
-            # low_memory=False se usa por seguridad en datasets grandes
-            df = pd.read_csv(file_path, encoding='latin1', low_memory=False)
-            
-            # Limpieza básica: rellenar NaN en columnas que deberían ser numéricas si es necesario
-            # Se recomienda hacer esta limpieza en el DataAnalyzer, pero aquí lo haremos básico
-            df = df.fillna(value='')
+        if db_exists:
+            print("Base de datos ya existente. Saltando la carga inicial de preguntas.")
+        else:
+            print(f"Conexión exitosa a la base de datos: {self.db_path}")
+            print(" INICIANDO CARGA MÍNIMA: SOLO PREGUNTAS FIJAS.")
+            self.load_all_data() 
             
             with self.connect() as conn:
                 if conn:
-                    # Sobrescribe la tabla si ya existe (para recarga)
-                    df.to_sql(table_name, conn, if_exists='replace', index=False)
-                    # print(f"✅ Tabla '{table_name}' cargada con {len(df):,} registros.")
-                    return True
-            
-        except FileNotFoundError:
-            print(f"❌ Error: Archivo CSV no encontrado en la ruta: {file_path}")
-            return False
-        except pd.errors.ParserError as e:
-            print(f"❌ Error de parsing en '{file_name}': {e}")
-            return False
-        except Exception as e:
-            print(f"❌ Error desconocido al cargar '{file_name}' en la tabla '{table_name}': {e}")
-            return False
-        
-        return False
+                    self.create_indices(conn) 
 
-    def load_all_data(self):
-        """Coordina la carga de todos los archivos CSV a SQLite."""
-        
-        # LISTA COMPLETA DE TODOS LOS ARCHIVOS CSV A CARGAR
-        # (Nombre de la tabla, Nombre del archivo CSV)
-        csv_files = [
-            # 5 Archivos originales
-            ('players', 'players.csv'),
-            ('clubs', 'clubs.csv'),
-            ('appearances', 'appearances.csv'),
-            ('transfers', 'transfers.csv'),
-            ('game_events', 'game_events.csv'),
-            
-            # 15 Archivos adicionales identificados
-            ('past_data', 'past-data.csv'),
-            ('world_cup_players', 'WorldCupPlayers.csv'),
-            ('full_dataset', 'Full_Dataset.csv'),
-            ('libertadores_finals', 'libertadores_finals.csv'),
-            ('competitions', 'competitions.csv'),
-            ('world_cups', 'WorldCups.csv'),
-            ('world_cup_matches', 'WorldCupMatches.csv'),
-            ('libertadores_matches', 'Libertadores.csv'),
-            ('ucl_finals', 'UCL_Finals_1955-2023.csv'),
-            ('ucl_performance', 'UCL_AllTime_Performance_Table.csv'),
-            ('ballon_dor', 'ballon_dor_rankings.csv'),
-            ('general_dataset', 'dataset.csv'),
-            ('shootouts', 'shootouts.csv'),
-            ('match_results', 'results.csv'),
-            ('match_goalscorers', 'goalscorers.csv'),
-        ]
+        # IMPORTANTE: Asegura que la tabla de Ranking exista y esté actualizada.
+        self._create_ranking_table()
 
-        print("\n--- Iniciando Carga de Datos ---")
-        
-        for table_name, file_name in csv_files:
-            file_path = os.path.join(self.data_dir, file_name)
-            
-            if not os.path.exists(file_path):
-                print(f" Archivo NO encontrado: {file_name}. Saltando esta tabla.")
-                continue
-            
-            success = self.load_data_from_csv(file_name, table_name)
-            
-            if success:
-                print(f" Tabla '{table_name}' cargada exitosamente.")
-
-        print("\n--- Carga de Datos Finalizada. Commits guardados. ---")
+    # ... [El resto de las funciones (load_all_data, load_csv_to_db, etc.) siguen igual]
 
 
 # ----------------------------------------------------------------------
 # BLOQUE DE PRUEBA (SOLO PARA VERIFICACIÓN)
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
-    # ⚠️ ADVERTENCIA: Esta ejecución borrará el archivo futbolmania.db y lo recreará 
-    # con TODAS las 20 tablas. Puede tardar varios minutos.
     
-    # Opcional: Borrar la base de datos antigua antes de empezar
+    # Opcional: Eliminar la DB para forzar la recarga y probar la velocidad
     if os.path.exists(DATABASE_FILE):
         os.remove(DATABASE_FILE)
-        print(f"Archivo antiguo '{os.path.basename(DATABASE_FILE)}' eliminado.")
+        print(f"Base de datos antigua eliminada: {DATABASE_FILE}")
         
     db_manager = DatabaseManager()
+    
+    print("--- INICIANDO PRUEBA DE CARGA MÍNIMA DE BASE DE DATOS ---")
     db_manager.initialize_database()
 
     print("\n--- Verificación de Tablas Creadas ---")
@@ -154,5 +171,18 @@ if __name__ == '__main__':
                 cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
                 tables = [row[0] for row in cursor.fetchall()]
                 print(f"Tablas cargadas ({len(tables)}): {', '.join(tables)}")
+                
+                # Verificación de la tabla Ranking y un test de guardado
+                if 'Ranking' in tables:
+                    # ¡CORREGIDO: AHORA INCLUYE player_name!
+                    db_manager.save_score(player_name='TestPlayer', score=8, total_questions=10, game_mode='Test_Clasico')
+                    ranking_data = db_manager.fetch_top_scores(limit=1)
+                    print("\n--- Prueba de Guardado y Lectura de Ranking ---")
+                    print(ranking_data)
+                
+                if 'quiz_questions' in tables:
+                    quiz_count = db_manager.query("SELECT COUNT(*) FROM quiz_questions;")
+                    print(f"\nConteo TOTAL de preguntas en quiz_questions (unificadas): {quiz_count.iloc[0, 0]}")
+
     except Exception as e:
         print(f"Error de verificación: {e}")

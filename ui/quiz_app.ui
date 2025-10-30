@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QuizApp</class>
+ <widget class="QWidget" name="QuizApp">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>850</width>
+    <height>650</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Quiz de Fútbol</string>
+  </property>
+  <property name="styleSheet">
+   <string>QWidget {
+	background-color: #2e2e2e;
+	color: white;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="spacing">
+    <number>15</number>
+   </property>
+   <item>
+    <widget class="QLabel" name="score_label">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string>font-size: 18px; font-weight: bold; color: #007bff; padding: 10px;</string>
+     </property>
+     <property name="text">
+      <string>Puntuación: 0/10</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="question_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="styleSheet">
+      <string>font-size: 24px; margin: 20px 0; padding: 15px; background-color: #444444; color: white; border-radius: 5px;</string>
+     </property>
+     <property name="text">
+      <string>Esperando selección de modo para iniciar Quiz...</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::RichText</enum>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="options_container">
+     <layout class="QVBoxLayout" name="options_layout">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="option_btn_0">
+        <property name="text">
+         <string>Opción 1</string>
+        </property>
+        <property name="styleSheet">
+         <string>padding: 12px; font-size: 16px; border: none; border-radius: 4px; background-color: #555555; color: white;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="option_btn_1">
+        <property name="text">
+         <string>Opción 2</string>
+        </property>
+        <property name="styleSheet">
+         <string>padding: 12px; font-size: 16px; border: none; border-radius: 4px; background-color: #555555; color: white;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="option_btn_2">
+        <property name="text">
+         <string>Opción 3</string>
+        </property>
+        <property name="styleSheet">
+         <string>padding: 12px; font-size: 16px; border: none; border-radius: 4px; background-color: #555555; color: white;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="option_btn_3">
+        <property name="text">
+         <string>Opción 4</string>
+        </property>
+        <property name="styleSheet">
+         <string>padding: 12px; font-size: 16px; border: none; border-radius: 4px; background-color: #555555; color: white;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="control_button">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>60</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string>background-color: #555555; color: white; padding: 18px; font-size: 20px; margin-top: 30px; border-radius: 8px;</string>
+     </property>
+     <property name="text">
+      <string>Esperando...</string>
+     </property>
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
