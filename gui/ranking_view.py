@@ -38,7 +38,7 @@ class RankingView(QWidget):
             logger.error(f" ERROR: Archivo .ui no encontrado en {UI_FILE}. No se puede inicializar la vista.")
             return
 
-        # 2. Encuentra los widgets (los nombres coinciden con tu .ui)
+        # 2. Encuentra los widgets 
         self.ranking_table = self.ui.findChild(QTableWidget, 'ranking_table')
         self.back_button = self.ui.findChild(QPushButton, 'btn_volver')
 
@@ -47,7 +47,7 @@ class RankingView(QWidget):
             self.back_button.clicked.connect(self.back_to_menu.emit)
         
         if self.ranking_table:
-            self.ranking_table.setColumnCount(5) # ¡Aseguramos 5 columnas!
+            self.ranking_table.setColumnCount(5) 
             self.ranking_table.setHorizontalHeaderLabels(['NOMBRE', 'Puntuación', 'Preguntas', 'Modo', 'Fecha'])
             self._setup_table_style()
 
@@ -58,7 +58,7 @@ class RankingView(QWidget):
         # Ocultar el encabezado vertical (los números de fila)
         self.ranking_table.verticalHeader().setVisible(False)
         
-        # APLICACIÓN CRÍTICA DE ESTILOS QSS (Esto hace visible el texto)
+        #  ESTILOS QSS (Esto hace visible el texto)
         self.ranking_table.setStyleSheet("""
             QTableWidget {
                 background-color: #444444; 
@@ -106,11 +106,11 @@ class RankingView(QWidget):
             logger.info("RankingView: No hay datos en el ranking.")
             return
 
-        # 3. Llenar la tabla fila por fila (AHORA CON 5 COLUMNAS)
+        # 3. Llenar la tabla fila por fila 
         for row_index, row_data in df.iterrows():
             date_str = pd.to_datetime(row_data['date_played']).strftime('%Y-%m-%d %H:%M')
             
-            # Columna 0: NOMBRE (Nuevo)
+            # Columna 0: NOMBRE 
             self.ranking_table.setItem(row_index, 0, QTableWidgetItem(row_data['player_name'])) 
             
             # Columna 1: Puntuación

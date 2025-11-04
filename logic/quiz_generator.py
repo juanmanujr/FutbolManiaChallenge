@@ -39,7 +39,7 @@ class QuizGenerator:
 
         self.used_questions: set = set()
 
-        # --- Carga de Cachés Dinámicos: ESTABLECIDOS COMO VACÍOS (Acelera la inicialización) ---
+        # Carga de Cachés Dinámicos: ESTABLECIDOS COMO VACÍOS (Acelera la inicialización) 
         self.scorers_cache = pd.DataFrame()
         self.ballon_dor_cache = pd.DataFrame()
         self.league_scorers_cache = {}
@@ -81,7 +81,7 @@ class QuizGenerator:
                 # Obtener el prefijo (parte antes del primer '_')
                 simplified = cat.split('_')[0]
                 
-                # Aplicar corrección si el prefijo está roto (ej: 'ruyff' -> 'Cruyff')
+                # Aplicar corrección si el prefijo está roto (ej: 'ruyff'  'Cruyff')
                 if simplified in self.PREFIX_MAPPING:
                     simplified = self.PREFIX_MAPPING[simplified]
                 
@@ -104,7 +104,7 @@ class QuizGenerator:
             return ["General"] 
 
 
-    # --- Métodos de Carga de Cachés ---
+    #  Métodos de Carga de Cachés 
 
     def _load_general_questions_cache(self) -> pd.DataFrame:
         """Carga el caché de las preguntas generales fijas desde la DB."""
@@ -117,7 +117,7 @@ class QuizGenerator:
             if df.empty:
                 logger.warning(f"La tabla {TABLE_NAME} está vacía (0 filas).")
                 
-            # CRÍTICO: Aseguramos que la columna 'Type' exista para filtrado
+            #  Aseguramos que la columna 'Type' exista para filtrado
             if 'Type' not in df.columns:
                 df['Type'] = 'General'
                 logger.warning("Columna 'Type' no encontrada, asignando 'General' por defecto.")
@@ -158,9 +158,9 @@ class QuizGenerator:
         logger.error("¡ERROR FATAL! No hay datos disponibles para generar preguntas.")
         return []
 
-    # --- Generación de Distractores y Auxiliares (Sin cambios) ---
+    #  Generación de Distractores y Auxiliares (Sin cambios) 
     def _get_distractors(self, df: pd.DataFrame, correct_name: str, column_name: str, num_distractors: int = 3) -> List[str]:
-        # ... (Lógica de distractores) ...
+        #  (Lógica de distractores) 
         try:
             potential_distractors = df[df[column_name] != correct_name][column_name].tolist()
             potential_distractors = list(set(potential_distractors))
@@ -173,7 +173,7 @@ class QuizGenerator:
         except Exception as e:
             return []
 
-    # ... (Generadores de preguntas específicas omitidos) ...
+    #  (Generadores de preguntas específicas omitidos) 
     def _generate_top_scorer_question(self) -> Optional[Dict[str, Any]]:
         df = self.scorers_cache
         if df.empty: return None
@@ -252,7 +252,7 @@ class QuizGenerator:
         }
 
 
-    # --- Método Principal de Generación (CON LÓGICA DE FALLBACK A 'General') ---
+    # --- Método Principal de Generación (CON LÓGICA DE FALLBACK A 'General') 
     def get_random_question(self, category: str = "General") -> Optional[Dict[str, Any]]:
         """
         Selecciona un tipo de pregunta aleatorio de los disponibles, 

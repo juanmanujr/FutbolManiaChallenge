@@ -1,4 +1,4 @@
-# core/database_manager.py (VERSIÓN CORREGIDA Y FINAL PARA EL RANKING)
+# core/database_manager.py 
 
 import sqlite3
 import pandas as pd
@@ -40,7 +40,7 @@ class DatabaseManager:
             yield conn
         except sqlite3.Error as e:
             logger.error(f"Error de conexión a la base de datos: {e}")
-            # print(f"Error de conexión a la base de datos: {e}") # Usamos logger
+            
         finally:
             if conn:
                 conn.close()
@@ -53,14 +53,12 @@ class DatabaseManager:
             if not conn:
                 return pd.DataFrame()
             try:
-                # Usamos read_sql_query de Pandas, que es ideal para SELECTs
                 return pd.read_sql_query(sql_query, conn, params=params)
             except Exception as e:
                 logger.error(f"ERROR en la ejecución de consulta SQL: {e}")
-                # print(f"ERROR en la ejecución de consulta SQL: {e}") # Usamos logger
                 return pd.DataFrame()
 
-    # --- LÓGICA DE PERSISTENCIA Y RANKING (CORREGIDA) ---
+    #  LÓGICA DE PERSISTENCIA Y RANKING  
     
     def _create_ranking_table(self):
         """Crea la tabla Ranking si no existe (AÑADIDA COLUMNA player_name)."""
@@ -78,7 +76,7 @@ class DatabaseManager:
                     )
                 """)
                 
-                # FIX CRÍTICO: Si la tabla ya existe y le falta la columna 'player_name', la añadimos.
+                #  Si la tabla ya existe y le falta la columna 'player_name', la añadimos.
                 try:
                     cursor.execute("ALTER TABLE Ranking ADD COLUMN player_name TEXT NOT NULL DEFAULT 'Anónimo';")
                     logger.info("Columna 'player_name' añadida a la tabla Ranking.")
@@ -119,12 +117,8 @@ class DatabaseManager:
         return self.query(sql, params=(limit,))
 
 
-    # --- LÓGICA DE CARGA INICIAL (SIN CAMBIOS) ---
-    
-    # ... Resto del código load_csv_to_db, initialize_database, load_all_data y create_indices.
-    # El resto del código no requiere cambios a menos que el ALTER TABLE no funcione
-    # y necesites borrar la DB.
-    # ...
+    #  LÓGICA DE CARGA INICIAL 
+   
 
 
     def initialize_database(self):
@@ -142,18 +136,15 @@ class DatabaseManager:
                 if conn:
                     self.create_indices(conn) 
 
-        # IMPORTANTE: Asegura que la tabla de Ranking exista y esté actualizada.
+        #  Asegura que la tabla de Ranking exista y esté actualizada.
         self._create_ranking_table()
 
-    # ... [El resto de las funciones (load_all_data, load_csv_to_db, etc.) siguen igual]
 
 
-# ----------------------------------------------------------------------
-# BLOQUE DE PRUEBA (SOLO PARA VERIFICACIÓN)
-# ----------------------------------------------------------------------
+# BLOQUE DE PRUEBA 
 if __name__ == '__main__':
     
-    # Opcional: Eliminar la DB para forzar la recarga y probar la velocidad
+    #  Eliminar la DB para forzar la recarga y probar la velocidad
     if os.path.exists(DATABASE_FILE):
         os.remove(DATABASE_FILE)
         print(f"Base de datos antigua eliminada: {DATABASE_FILE}")
@@ -174,7 +165,6 @@ if __name__ == '__main__':
                 
                 # Verificación de la tabla Ranking y un test de guardado
                 if 'Ranking' in tables:
-                    # ¡CORREGIDO: AHORA INCLUYE player_name!
                     db_manager.save_score(player_name='TestPlayer', score=8, total_questions=10, game_mode='Test_Clasico')
                     ranking_data = db_manager.fetch_top_scores(limit=1)
                     print("\n--- Prueba de Guardado y Lectura de Ranking ---")

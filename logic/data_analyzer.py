@@ -100,7 +100,6 @@ class DataAnalyzer:
         if stat not in self.VALID_STATS:
             logger.error(f"Estadística no válida: '{stat}'. Se intentó usar 'goals' en su lugar.")
             stat = 'goals' # Fallback seguro
-            # Alternativamente, podrías lanzar: raise ValueError(f"Estadística no válida: {stat}")
             
         target_season = self.latest_year - 1 
         stat_column = stat # Ya validado como seguro

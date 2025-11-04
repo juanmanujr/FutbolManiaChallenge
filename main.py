@@ -7,7 +7,7 @@ import sys
 import logging
 from PySide6.QtWidgets import QApplication
 from core.database_manager import DatabaseManager
-from gui.main_window import MainWindow  # Importamos la clase principal
+from gui.main_window import MainWindow  
 
 # =================================================================
 # CONFIGURACIÓN INICIAL
@@ -50,8 +50,7 @@ def setup_data():
     else:
         logger.info("Base de datos ya existente. Saltando la carga inicial de preguntas.")
     
-    return db_manager # Devolvemos el manager por si se necesita, aunque MainWindow lo inicializa internamente
-
+    return db_manager 
 # =================================================================
 # PUNTO DE ARRANQUE PRINCIPAL
 # =================================================================

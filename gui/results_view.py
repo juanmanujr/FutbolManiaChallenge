@@ -1,9 +1,9 @@
-# gui/results_view.py (VERSIÓN FINAL QUE USA .ui y GUARDA EL SCORE)
+# gui/results_view.py 
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, QMessageBox
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import Signal, Qt
-from core.database_manager import DatabaseManager # Importación necesaria
+
 import os
 import logging
 
@@ -14,7 +14,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO) 
 
 class ResultsView(QWidget):
-    # Señales 
+    #  SEÑAL PARA SOLICITAR EL GUARDADO 
+    # Envía los datos que el controlador (MainWindow) necesita para guardar
+    save_score_requested = Signal(str, int, int, str) # (name, score, total_q, mode)
+    
+    # Otras Señales 
     start_new_quiz_request = Signal()
     show_ranking_request = Signal()
     back_to_menu_request = Signal()
@@ -24,10 +28,10 @@ class ResultsView(QWidget):
     _total = 0
     _mode = ""
 
-    # Recibe el db_manager de MainWindow para guardar los resultados
-    def __init__(self, db_manager: DatabaseManager):
-        super().__init__()
-        self.db_manager = db_manager
+    #  ELIMINAR DB_MANAGER DEL CONSTRUCTOR 
+    def __init__(self, parent=None): 
+        super().__init__(parent)
+        # self.db_manager ya no existe
         self.score_saved = False # Flag para evitar guardar dos veces
         
         # 1. Carga el diseño visual 
@@ -47,28 +51,22 @@ class ResultsView(QWidget):
         if self.replay_button:
             self.replay_button.clicked.connect(self.start_new_quiz_request.emit)
         if self.ranking_button:
-            # Conectamos directamente el ranking, pero primero guardamos por si el usuario olvidó hacerlo
+            # Conectamos a la función que pide guardar y luego pide ir al ranking
             self.ranking_button.clicked.connect(self._save_score_and_show_ranking)
         if self.menu_button:
             self.menu_button.clicked.connect(self._save_score_and_go_menu)
 
         # Conexión del campo de entrada (Player Name)
         if self.name_entry:
-             # Conectamos la pulsación de ENTER al guardado
             self.name_entry.returnPressed.connect(self._save_current_score)
             
-        # Añadir un botón explícito de "Guardar" si existe en el UI
-        # self.save_button = self.ui.findChild(QPushButton, 'btn_save_score') 
-        # if self.save_button:
-        #     self.save_button.clicked.connect(self._save_current_score)
-
         self.setStyleSheet("background-color: #2e2e2e; color: white;")
         
     def _find_ui_widgets(self):
         """Busca y asigna los widgets cargados del .ui a variables de instancia."""
         self.title_label = self.ui.findChild(QLabel, 'lbl_title')
         self.score_label = self.ui.findChild(QLabel, 'lbl_score')
-        self.name_entry = self.ui.findChild(QLineEdit, 'txt_player_name') # Nuevo widget
+        self.name_entry = self.ui.findChild(QLineEdit, 'txt_player_name') 
         self.replay_button = self.ui.findChild(QPushButton, 'btn_replay')
         self.ranking_button = self.ui.findChild(QPushButton, 'btn_ranking')
         self.menu_button = self.ui.findChild(QPushButton, 'btn_menu')
@@ -84,27 +82,27 @@ class ResultsView(QWidget):
         self._score = score
         self._total = total
         self._mode = mode
-        self.score_saved = False # Permite guardar de nuevo
+        self.score_saved = False 
 
         mode_text = "CLÁSICA" if "Clasica" in mode else "TEMÁTICA"
         
         if self.title_label:
-             self.title_label.setText(" ¡QUIZ TERMINADO! ")
-             self.title_label.setStyleSheet("font-size: 36px; font-weight: bold; color: #007bff;")
-             
+            self.title_label.setText(" ¡QUIZ TERMINADO! ")
+            self.title_label.setStyleSheet("font-size: 36px; font-weight: bold; color: #007bff;")
+            
         if self.score_label:
             self.score_label.setText(f"Puntuación Final: {score} de {total} ({mode_text})")
             self.score_label.setStyleSheet("font-size: 28px; color: #28a745; margin-bottom: 30px;")
 
         if self.name_entry:
-             self.name_entry.clear()
-             self.name_entry.setEnabled(True)
-             self.name_entry.setFocus()
-             self.name_entry.setStyleSheet("background-color: #444444; color: white; padding: 10px; border: 1px solid #007bff;")
+            self.name_entry.clear()
+            self.name_entry.setEnabled(True)
+            self.name_entry.setFocus()
+            self.name_entry.setStyleSheet("background-color: #444444; color: white; padding: 10px; border: 1px solid #007bff;")
 
 
     def _save_current_score(self):
-        """Valida el nombre e invoca la función de guardado en la DB."""
+        """Valida el nombre y EMITE la señal para que el guardado ocurra en MainWindow."""
         if self.score_saved:
             QMessageBox.information(self, "Ya Guardado", "Tu puntuación ya ha sido guardada en el ranking.")
             return
@@ -116,35 +114,40 @@ class ResultsView(QWidget):
             self.name_entry.setFocus()
             return
 
+        #  EMITIR LA SEÑAL EN LUGAR DE GUARDAR DIRECTAMENTE 
         try:
-            self.db_manager.save_score(
-                player_name=player_name,
-                score=self._score, 
-                total_questions=self._total, 
-                game_mode=self._mode
+            self.save_score_requested.emit(
+                player_name, 
+                self._score, 
+                self._total, 
+                self._mode
             )
+            # Asumimos que si la señal fue emitida, el guardado será exitoso
             self.score_saved = True
             self.name_entry.setEnabled(False) # Deshabilita la entrada una vez guardado
             self.name_entry.setText(f"{player_name} (Puntaje Guardado)")
-            logger.info(f"Score guardado para {player_name}: {self._score}/{self._total} | Modo: {self._mode}")
-            QMessageBox.information(self, "¡Éxito!", f"¡{player_name}, tu puntuación ha sido registrada!")
+            logger.info(f"Petición de score enviada para {player_name}: {self._score}/{self._total} | Modo: {self._mode}")
+            QMessageBox.information(self, "¡Éxito!", f"¡{player_name}, tu puntuación ha sido registrada! (Guardado manejado por el Controlador)")
 
         except Exception as e:
-            logger.error(f"Error al guardar score en DB para {player_name}: {e}")
-            QMessageBox.critical(self, "Error de Guardado", "Ocurrió un error al intentar guardar la puntuación.")
+            # Esta excepción es para el proceso de emitir la señal, NO para la DB
+            logger.error(f"Error al emitir la señal de guardado: {e}")
+            QMessageBox.critical(self, "Error de Señal", "Ocurrió un error al intentar solicitar el guardado.")
+
 
     def _save_score_and_show_ranking(self):
-        """Intenta guardar el score y luego navega al ranking."""
+        """Intenta guardar el score y luego pide navegar al ranking."""
         if not self.score_saved:
             self._save_current_score()
         
+        # Solo navegamos si el guardado se completó o fue solicitado (self.score_saved = True)
         if self.score_saved:
-             self.show_ranking_request.emit()
+            self.show_ranking_request.emit()
 
     def _save_score_and_go_menu(self):
-        """Intenta guardar el score y luego navega al menú principal."""
+        """Intenta guardar el score y luego pide navegar al menú principal."""
         if not self.score_saved:
             self._save_current_score()
 
         if self.score_saved:
-             self.back_to_menu_request.emit()
+            self.back_to_menu_request.emit()

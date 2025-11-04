@@ -1,9 +1,9 @@
-# gui/quiz_app.py (VERSIÓN FINAL QUE USA .ui)
+# gui/quiz_app.py 
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox, QSizePolicy
 )
-from PySide6.QtUiTools import QUiLoader # <--- Importación clave para cargar el .ui
+from PySide6.QtUiTools import QUiLoader #  Importación clave para cargar el .ui
 from PySide6.QtCore import Qt, Signal 
 from logic.quiz_generator import QuizGenerator
 import logging
@@ -15,7 +15,7 @@ import os
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO) 
 
-# Define la ruta al archivo .ui (Debe coincidir con el nombre que creaste)
+# Define la ruta al archivo .ui 
 UI_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ui', 'quiz_app.ui')
 
 # ----------------------------------------------------------------------
@@ -53,7 +53,6 @@ class QuizApp(QWidget):
             self._find_ui_widgets() # Llama al nuevo método para buscar widgets
         else:
             logger.error(f" ERROR: Archivo .ui no encontrado en {UI_FILE}. No se puede inicializar la vista.")
-            # Opcional: Si el .ui falla, podrías llamar a self.init_ui() de tu versión anterior
             return
 
         self.setStyleSheet("background-color: #2e2e2e;")
@@ -74,7 +73,7 @@ class QuizApp(QWidget):
             if btn:
                 self.option_buttons.append(btn)
             
-    # --- Estilos y Toggles (Lógica de juego sin cambios) ---
+    # Estilos y Toggles  
 
     def toggle_options(self, enable):
         """Habilita/Deshabilita los botones de opción."""
@@ -83,7 +82,7 @@ class QuizApp(QWidget):
             if enable:
                 self._set_default_button_style(btn)
     
-    # NOTA: Esta función DEBE sobreescribir el estilo del .ui para funcionar correctamente
+    #  Esta función DEBE sobreescribir el estilo del .ui para funcionar correctamente
     def _set_default_button_style(self, btn):
         """Estilo base para los botones de opción."""
         btn.setStyleSheet("""

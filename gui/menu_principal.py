@@ -1,11 +1,11 @@
-# gui/menu_principal.py (MODIFICADO para Fase III: Redirección a Selección de Modo)
+# gui/menu_principal.py 
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 from PySide6.QtUiTools import QUiLoader 
 from PySide6.QtCore import Signal
 import os
 
-# Define la ruta relativa al archivo .ui que crearás en Qt Designer
+#  la ruta relativa al archivo .ui en Qt Designer
 UI_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ui', 'menu_principal.ui')
 
 class MenuPrincipal(QWidget):
@@ -34,7 +34,7 @@ class MenuPrincipal(QWidget):
             self._emergency_layout()
             return
             
-        # 2. Conexión de los botones (¡CRÍTICO!)
+        # 2. Conexión de los botones 
         try:
             # Botón para ir a la Selección de Modo
             btn_jugar = self.ui.findChild(QPushButton, 'btn_jugar')

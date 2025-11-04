@@ -1,9 +1,9 @@
-# gui/mode_selection_view.py (VERSIÓN FINAL QUE USA .ui)
+# gui/mode_selection_view.py 
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QRadioButton, QComboBox, QPushButton
 )
-from PySide6.QtUiTools import QUiLoader # <--- Importación clave para cargar el .ui
+from PySide6.QtUiTools import QUiLoader #  Importación clave para cargar el .ui
 from PySide6.QtCore import Qt, Signal
 import os
 import logging
@@ -48,9 +48,9 @@ class ModeSelectionView(QWidget):
             return
             
         # 3. Conexiones
-        # Las conexiones ahora llaman a tus métodos existentes, pero desde los nuevos widgets
+        # Las conexiones ahora llaman a  métodos existentes, pero desde los nuevos widgets
         if self.rb_clasica:
-            # Usamos _set_mode dentro de una lambda que verifica si está checkeado
+            #  _set_mode dentro de una lambda que verifica si está checkeado
             self.rb_clasica.toggled.connect(lambda checked: self._set_mode("TriviaClasica") if checked else None)
         if self.rb_tematica:
             self.rb_tematica.toggled.connect(lambda checked: self._set_mode("Tematico") if checked else None)
