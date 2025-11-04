@@ -1,4 +1,4 @@
-# gui/ranking_view.py (MODIFICACIÓN: Muestra la columna 'NOMBRE' y ajusta índices)
+# gui/ranking_view.py 
 
 from PySide6.QtWidgets import (
     QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, 
@@ -18,15 +18,15 @@ logger.setLevel(logging.INFO)
 
 class RankingView(QWidget):
     """
-    Vista que muestra el ranking de puntajes cargando datos desde DatabaseManager.
+    Vista que muestra el ranking de puntajes. 
+    NO almacena la referencia a la DB, la recibe solo para cargar datos.
     """
     back_to_menu = Signal()
 
-    def __init__(self, db_manager=None):
-        super().__init__()
-        self.db_manager = db_manager 
-        
-        # 1. Carga el diseño visual (TU .ui)
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+       
         loader = QUiLoader()
         self.ui = loader.load(UI_FILE, self)
         
@@ -53,12 +53,11 @@ class RankingView(QWidget):
 
 
     def _setup_table_style(self):
-        """Aplica estilos QSS y configuración final a la tabla para asegurar que los datos sean visibles."""
+        """Aplica estilos QSS y configuración final a la tabla."""
         
-        # Ocultar el encabezado vertical (los números de fila)
         self.ranking_table.verticalHeader().setVisible(False)
         
-        #  ESTILOS QSS (Esto hace visible el texto)
+        # ESTILOS QSS (Esto hace visible el texto)
         self.ranking_table.setStyleSheet("""
             QTableWidget {
                 background-color: #444444; 
@@ -80,23 +79,23 @@ class RankingView(QWidget):
 
         # Ajustar el ancho de las columnas
         header = self.ranking_table.horizontalHeader()
-        # Columna de Nombre (índice 0) estirado
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        # Modo (índice 3) y Fecha (índice 4) ajustados al contenido
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         
 
-    def load_ranking_data(self):
+    # --- CORRECCIÓN 2: RECIBIR db_manager COMO ARGUMENTO ---
+    # Esto soluciona el error "takes 1 positional argument but 2 were given"
+    def load_ranking_data(self, db_manager):
         """Carga y muestra los datos del ranking desde la DB (Llamado desde MainWindow al navegar)."""
-        if not self.ranking_table or not self.db_manager:
-            logger.warning("RankingView: No se puede cargar el ranking (tabla o DBManager nulo).")
+        if not self.ranking_table or not db_manager: 
+            logger.warning("RankingView: No se puede cargar el ranking (tabla nula o DBManager no suministrado).")
             return
 
-        logger.info("RankingView: Cargando datos desde la base de datos...")
+        logger.info("RankingView: Solicitando datos de ranking...")
         
-        # 1. Obtener datos del ranking (fetch_top_scores debe retornar player_name)
-        df = self.db_manager.fetch_top_scores(limit=15)
+        # 1. Obtener datos del ranking usando el argumento db_manager
+        df = db_manager.fetch_top_scores(limit=15)
         
         # 2. Limpiar la tabla antes de llenarla
         self.ranking_table.clearContents()
